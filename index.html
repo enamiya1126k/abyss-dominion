@@ -2,77 +2,150 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
-  >
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
   <meta name="theme-color" content="#09060d">
-  <meta name="description" content="地下1000階を探索するモンスター育成RPG">
+  <meta name="description" content="ABYSS DOMINION - 地下1000階の魔王">
   <title>ABYSS DOMINION</title>
-
   <link rel="stylesheet" href="./src/styles/reset.css">
   <link rel="stylesheet" href="./src/styles/theme.css">
   <link rel="stylesheet" href="./src/styles/app.css">
-  <link rel="stylesheet" href="./src/styles/foundation.css">
-  <link rel="stylesheet" href="./src/styles/explore.css">
 </head>
 <body>
   <div id="app" class="app-shell">
-    <header class="app-header">
-      <div>
-        <p class="app-eyebrow">ABYSS DOMINION</p>
-        <h1 class="app-title">地下1000階の魔王</h1>
-      </div>
-
-      <div class="dev-info" aria-label="開発情報">
-        <span id="fpsDisplay">-- FPS</span>
-        <span id="versionDisplay">v0.0.1</span>
-      </div>
-    </header>
-
-    <main id="sceneRoot" class="scene-root" aria-live="polite">
-      <section id="loadingScene" class="scene is-active">
-        <div class="loading-card">
-          <div class="loading-symbol" aria-hidden="true">◆</div>
-          <p>深淵を構築中...</p>
+    <section id="homeScreen" class="screen active">
+      <div class="page">
+        <div class="brand">
+          <div class="eyebrow">ABYSS DOMINION</div>
+          <h1>地下1000階の魔王</h1>
+          <p>探索・宝箱・敵回避・セレクトショップを1本につないだ探索完成版。</p>
         </div>
-      </section>
-    </main>
 
-    <nav class="bottom-navigation" aria-label="メインメニュー">
-      <button type="button" data-nav="home" class="nav-button is-active">
-        <span class="nav-icon" aria-hidden="true">🏠</span>
-        <span>ホーム</span>
-      </button>
+        <div class="panel hero-panel">
+          <div>
+            <div id="homeArea" class="area-name">地下洞窟</div>
+            <div id="homeFloor" class="hero-floor">最高到達 1階</div>
+            <div id="homeStats" class="muted"></div>
+          </div>
+          <button id="startButton" class="primary big">探索へ</button>
+        </div>
 
-      <button type="button" data-nav="monsters" class="nav-button">
-        <span class="nav-icon" aria-hidden="true">🐲</span>
-        <span>モンスター</span>
-      </button>
+        <div class="panel">
+          <div class="spread">
+            <h2>チェックポイント</h2>
+            <span class="small">10階ごとに保存</span>
+          </div>
+          <div id="checkpointList" class="checkpoint-list"></div>
+        </div>
 
-      <button type="button" data-nav="equipment" class="nav-button">
-        <span class="nav-icon" aria-hidden="true">⚔️</span>
-        <span>装備</span>
-      </button>
+        <div class="panel">
+          <h2>v0.0.5 Explore Update</h2>
+          <ul class="feature-list">
+            <li>タップ移動</li>
+            <li>1本指ドラッグ</li>
+            <li>2本指ピンチズーム</li>
+            <li>ダブルタップで主人公へ復帰</li>
+            <li>敵の巡回・通路追跡・見失い</li>
+            <li>宝箱・ショップ・階段・次階層</li>
+            <li>マップ外タップ無効</li>
+          </ul>
+        </div>
 
-      <button type="button" data-nav="shop" class="nav-button">
-        <span class="nav-icon" aria-hidden="true">🏪</span>
-        <span>ショップ</span>
-      </button>
+        <button id="resetButton" class="danger">セーブ初期化</button>
+      </div>
+    </section>
 
-      <button type="button" data-nav="settings" class="nav-button">
-        <span class="nav-icon" aria-hidden="true">⚙️</span>
-        <span>設定</span>
-      </button>
-    </nav>
+    <section id="exploreScreen" class="screen">
+      <div class="game-shell">
+        <header class="hud">
+          <div><span>階</span><b id="floorHud">1</b></div>
+          <div><span>G</span><b id="goldHud">0</b></div>
+          <div><span>魔晶石</span><b id="crystalHud">0</b></div>
+          <div class="hp-wide">
+            <span>魔王軍HP</span>
+            <div class="bar"><i id="hpFill"></i></div>
+            <b id="hpText">160/160</b>
+          </div>
+          <div class="dev-chip"><span id="fpsText">-- FPS</span><span>v0.0.5</span></div>
+        </header>
 
-    <div id="modalRoot" class="modal-root" aria-live="assertive"></div>
-    <div id="toastRoot" class="toast-root" aria-live="polite"></div>
+        <div class="canvas-wrap">
+          <canvas id="gameCanvas"></canvas>
+          <canvas id="miniMap"></canvas>
+
+          <div id="toast" class="toast hidden"></div>
+
+          <div id="areaBanner" class="area-banner hidden">
+            <div>
+              <span id="bannerFloor" class="eyebrow"></span>
+              <strong id="bannerArea"></strong>
+            </div>
+          </div>
+
+          <div id="lootModal" class="loot-modal hidden">
+            <div id="lootIcon" class="loot-icon">🎁</div>
+            <div id="lootRarity" class="loot-rarity">N</div>
+            <div id="lootName" class="loot-name">アイテム</div>
+            <div id="lootDetail" class="muted"></div>
+            <button id="lootClose" class="primary">受け取る</button>
+          </div>
+        </div>
+
+        <nav class="bottom-nav">
+          <button data-menu="status">ステータス</button>
+          <button data-menu="inventory">持ち物</button>
+          <button data-menu="map">マップ</button>
+          <button data-menu="help">操作</button>
+          <button id="returnButton" class="danger">帰還</button>
+        </nav>
+      </div>
+
+      <div id="sheet" class="sheet hidden">
+        <button id="sheetClose" class="sheet-close">×</button>
+        <div id="sheetBody"></div>
+      </div>
+    </section>
+
+    <section id="shopScreen" class="screen">
+      <div class="room-page">
+        <header class="room-header">
+          <div>
+            <div class="eyebrow">SAFE ROOM</div>
+            <h1>深淵のセレクトショップ</h1>
+          </div>
+          <button id="leaveShopButton">戻る</button>
+        </header>
+
+        <div class="room-grid">
+          <button class="room-card" data-room="bed">
+            <span>🛏️</span><b>ベッド</b><small>100Gで全回復</small>
+          </button>
+          <button class="room-card" data-room="merchant">
+            <span>🧙‍♂️</span><b>商人</b><small>購入・売却</small>
+          </button>
+          <button class="room-card" data-room="storage">
+            <span>🧰</span><b>倉庫</b><small>所持品確認</small>
+          </button>
+          <button class="room-card" data-room="rumor">
+            <span>🔮</span><b>深淵の噂</b><small>次階層情報</small>
+          </button>
+        </div>
+
+        <div id="roomPanel" class="panel">
+          <h2>敵の来ない安全地帯</h2>
+          <p class="muted">休憩と買い物を済ませてから探索へ戻れる。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="resultScreen" class="screen">
+      <div class="page">
+        <div id="resultEye" class="eyebrow"></div>
+        <h1 id="resultTitle"></h1>
+        <div id="resultBody"></div>
+        <button id="homeButton" class="primary big">魔王城へ</button>
+      </div>
+    </section>
   </div>
-
-  <noscript>
-    このゲームを遊ぶにはJavaScriptを有効にしてください。
-  </noscript>
 
   <script type="module" src="./src/main.js"></script>
 </body>
