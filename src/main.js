@@ -1,130 +1,20 @@
-import { GAME_VERSION } from "./game/config.js";
-import { SceneManager } from "./game/sceneManager.js";
-import { SaveManager } from "./game/saveManager.js";
-import { InputManager } from "./game/inputManager.js";
-import { ExploreScene } from "./game/exploreScene.js";
-
-const sceneRoot = document.querySelector("#sceneRoot");
-const nav = document.querySelector(".bottom-navigation");
-const fps = document.querySelector("#fpsDisplay");
-document.querySelector("#versionDisplay").textContent = `v${GAME_VERSION}`;
-
-const save = new SaveManager();
-const input = new InputManager();
-const scenes = new SceneManager(sceneRoot);
-let exploreScene = null;
-
-const homeTemplate = () => `
-<section class="scene is-active foundation-scene">
-  <div class="foundation-content">
-    <div class="panel foundation-hero">
-      <p class="app-eyebrow">EXPLORE BUILD</p>
-      <h2>地下探索</h2>
-      <p class="sub">迷路を自由に探索し、宝箱と階段を探す。</p>
-      <button id="startExploreBtn" class="bigButton">探索開始</button>
-    </div>
-    <div class="foundation-grid">
-      <article class="card"><span class="sub">現在階層</span><strong>${save.data.floor}</strong></article>
-      <article class="card"><span class="sub">最高到達</span><strong>${save.data.maxFloor}</strong></article>
-      <article class="card"><span class="sub">GOLD</span><strong>${save.data.gold}</strong></article>
-      <article class="card"><span class="sub">魔晶石</span><strong>${save.data.magicCrystals}</strong></article>
-    </div>
-  </div>
-</section>`;
-
-const placeholder = (title) => `
-<section class="scene is-active foundation-scene">
-  <div class="foundation-content">
-    <div class="panel">
-      <p class="app-eyebrow">COMING NEXT</p>
-      <h2>${title}</h2>
-      <p class="sub">次のアップデートで実装する。</p>
-    </div>
-  </div>
-</section>`;
-
-scenes.register("home", homeTemplate);
-scenes.register("monsters", () => placeholder("モンスター"));
-scenes.register("equipment", () => placeholder("装備"));
-scenes.register("shop", () => placeholder("ショップ"));
-scenes.register("settings", () => placeholder("設定"));
-scenes.register("explore", () => `
-<section class="scene is-active explore-scene">
-  <div class="explore-hud">
-    <span>FLOOR <b id="exploreFloor">${save.data.floor}</b></span>
-    <span>タップ移動 / ドラッグ / ピンチ</span>
-  </div>
-  <canvas id="dungeonCanvas" class="dungeon-canvas"></canvas>
-  <canvas id="minimapCanvas" class="minimap-canvas"></canvas>
-  <button id="leaveExploreBtn" class="leave-explore">帰還</button>
-</section>`);
-
-scenes.onChange((name) => {
-  exploreScene?.stop();
-  exploreScene = null;
-
-  document.querySelectorAll(".nav-button").forEach((button) => {
-    button.classList.toggle(
-      "is-active",
-      button.dataset.nav === name || (name === "explore" && button.dataset.nav === "home")
-    );
-  });
-
-  if (name === "home") {
-    document.querySelector("#startExploreBtn")?.addEventListener("click", () => scenes.show("explore"));
-  }
-
-  if (name === "explore") {
-    document.querySelector("#leaveExploreBtn")?.addEventListener("click", () => scenes.show("home"));
-    exploreScene = new ExploreScene({
-      canvas: document.querySelector("#dungeonCanvas"),
-      minimapCanvas: document.querySelector("#minimapCanvas"),
-      inputManager: input,
-      onFloorClear: () => {
-        save.update({
-          floor: save.data.floor + 1,
-          maxFloor: Math.max(save.data.maxFloor, save.data.floor + 1),
-        });
-        exploreScene?.stop();
-        exploreScene = new ExploreScene({
-          canvas: document.querySelector("#dungeonCanvas"),
-          minimapCanvas: document.querySelector("#minimapCanvas"),
-          inputManager: input,
-          onFloorClear: () => scenes.show("explore"),
-        });
-        scenes.show("explore");
-      },
-    });
-    exploreScene.start();
-  }
-});
-
-nav.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-nav]");
-  if (button) scenes.show(button.dataset.nav);
-});
-
-window.addEventListener("abyss:toast", (event) => {
-  const root = document.querySelector("#toastRoot");
-  root.textContent = event.detail;
-  root.classList.add("toast-visible");
-  clearTimeout(window.__abyssToastTimer);
-  window.__abyssToastTimer = setTimeout(() => {
-    root.classList.remove("toast-visible");
-  }, 1200);
-});
-
-let frames = 0;
-let started = performance.now();
-function fpsLoop(now) {
-  frames++;
-  if (now - started >= 500) {
-    fps.textContent = `${Math.round(frames * 1000 / (now - started))} FPS`;
-    frames = 0;
-    started = now;
-  }
-  requestAnimationFrame(fpsLoop);
-}
-
-scenes.show("home");
-requestAnimationFrame(fpsLoop);
+import{VERSION,areaFor}from"./game/config.js";import{SaveManager}from"./game/save.js";import{Explore}from"./game/explore.js";
+const $=id=>document.getElementById(id),screens=["homeScreen","exploreScreen","shopScreen","resultScreen"];let save=new SaveManager(),explore=null,frames=0,fpsStart=performance.now();
+function show(id){screens.forEach(s=>$(s).classList.toggle("active",s===id))}
+function renderHome(){const a=areaFor(save.data.maxFloor);$("homeArea").textContent=a.name;$("homeFloor").textContent=`最高到達 ${save.data.maxFloor}階`;$("homeStats").textContent=`G ${save.data.gold}　魔晶石 ${save.data.crystal}　HP ${save.data.hp}/${save.data.maxHp}`;const floors=[];for(let f=1;f<=save.data.maxFloor;f+=10)floors.push(f);$("checkpointList").innerHTML=floors.map(f=>`<button data-warp="${f}">${f}階</button>`).join("")}
+function hud(){$("floorHud").textContent=save.data.floor;$("goldHud").textContent=save.data.gold;$("crystalHud").textContent=save.data.crystal;$("hpText").textContent=`${save.data.hp}/${save.data.maxHp}`;$("hpFill").style.width=`${Math.max(0,Math.min(100,save.data.hp/save.data.maxHp*100))}%`}
+function toast(t){$("toast").textContent=t;$("toast").classList.remove("hidden");clearTimeout(toast.t);toast.t=setTimeout(()=>$("toast").classList.add("hidden"),1100)}
+function banner(){$("bannerFloor").textContent=`FLOOR ${save.data.floor}`;$("bannerArea").textContent=areaFor(save.data.floor).name;$("areaBanner").classList.remove("hidden");setTimeout(()=>$("areaBanner").classList.add("hidden"),900)}
+function start(){show("exploreScreen");hud();banner();explore=new Explore({canvas:$("gameCanvas"),minimap:$("miniMap"),save,onShop:()=>{save.update({nextShopFloor:save.data.floor+3+Math.floor(Math.random()*5)});show("shopScreen")},onFloor:()=>{const next=save.data.floor+1;save.update({floor:next,maxFloor:Math.max(save.data.maxFloor,next),checkpoint:next%10===0?next:save.data.checkpoint});start()},onToast:toast,onLoot:loot,onGameOver:gameOver});explore.start()}
+function loot(){const r=Math.random();let l;if(r<.24)l={icon:"💰",rarity:"N",name:`${40+save.data.floor*4}G`,detail:"ゴールド",apply:()=>save.update({gold:save.data.gold+40+save.data.floor*4})};else if(r<.4)l={icon:"🧪",rarity:"N",name:"回復薬 ×1",detail:"探索用回復アイテム",apply:()=>save.data.inventory.potion++};else if(r<.54)l={icon:"💎",rarity:"R",name:"捕獲結晶 ×1",detail:"モンスター捕獲用",apply:()=>save.data.inventory.capture++};else if(r<.64)l={icon:"🔮",rarity:"SR",name:"魔晶石 ×1",detail:"召喚に使用",apply:()=>save.update({crystal:save.data.crystal+1})};else{const rarity=r<.82?"R":r<.94?"SR":r<.99?"SSR":"LR",names=["鉄の剣","疾風の指輪","魔布のローブ","炎竜の牙","王者の冠"],name=names[Math.floor(Math.random()*names.length)];l={icon:rarity==="LR"?"🌈":"⚔️",rarity,name,detail:"装備アイテム",apply:()=>save.data.gear.push({name,rarity,sell:{R:70,SR:140,SSR:300,LR:800}[rarity]})}}l.apply();save.flush();$("lootIcon").textContent=l.icon;$("lootRarity").textContent=l.rarity;$("lootRarity").className=`loot-rarity rarity-${l.rarity}`;$("lootName").textContent=l.name;$("lootDetail").textContent=l.detail;$("lootModal").classList.remove("hidden")}
+function gameOver(){const lost=Math.floor(save.data.gold*.5);save.update({gold:save.data.gold-lost,floor:save.data.checkpoint,hp:save.data.maxHp,inRun:false});result("GAME OVER","魔王軍全滅",[`失ったG：${lost}`,`${save.data.checkpoint}階から再開可能`])}
+function result(eye,title,items){$("resultEye").textContent=eye;$("resultTitle").textContent=title;$("resultBody").innerHTML=`<ul>${items.map(x=>`<li>${x}</li>`).join("")}</ul>`;show("resultScreen")}
+function merchant(){$("roomPanel").innerHTML=`<h2>商人</h2><div class="item-row"><span>回復薬</span><button onclick="buyItem('potion',50)">50G</button></div><div class="item-row"><span>捕獲結晶</span><button onclick="buyItem('capture',80)">80G</button></div><h2>装備売却</h2>${save.data.gear.length?save.data.gear.map((g,i)=>`<div class="item-row"><span>[${g.rarity}] ${g.name}</span><button onclick="sellGear(${i})">${g.sell}G</button></div>`).join(""):"装備なし"}`}
+window.buyItem=(type,price)=>{if(save.data.gold<price)return alert("G不足");save.data.gold-=price;save.data.inventory[type]++;save.flush();merchant()}
+window.sellGear=i=>{const g=save.data.gear[i];save.data.gold+=g.sell;save.data.gear.splice(i,1);save.flush();merchant()}
+$("startButton").onclick=()=>{save.update({inRun:true});start()};$("returnButton").onclick=()=>{if(confirm("帰還する？")){explore?.stop();save.update({inRun:false});result("RETURN","帰還成功",[`到達階：${save.data.floor}`,`GOLD：${save.data.gold}`])}};$("homeButton").onclick=()=>{renderHome();show("homeScreen")};$("lootClose").onclick=()=>$("lootModal").classList.add("hidden");$("sheetClose").onclick=()=>$("sheet").classList.add("hidden");$("leaveShopButton").onclick=()=>start();$("resetButton").onclick=()=>{if(confirm("本当に初期化する？")){save.reset();location.reload()}};
+$("checkpointList").onclick=e=>{const b=e.target.closest("[data-warp]");if(b){save.update({floor:+b.dataset.warp,checkpoint:+b.dataset.warp,hp:save.data.maxHp,inRun:true});start()}};
+document.querySelector(".bottom-nav").onclick=e=>{const b=e.target.closest("[data-menu]");if(!b)return;const t=b.dataset.menu;if(t==="status")$("sheetBody").innerHTML=`<h2>ステータス</h2><div class="item-row"><span>HP</span><b>${save.data.hp}/${save.data.maxHp}</b></div><div class="item-row"><span>最高到達</span><b>${save.data.maxFloor}階</b></div>`;if(t==="inventory")$("sheetBody").innerHTML=`<h2>持ち物</h2><div class="item-row"><span>回復薬</span><b>${save.data.inventory.potion}</b></div><div class="item-row"><span>捕獲結晶</span><b>${save.data.inventory.capture}</b></div><div class="item-row"><span>装備</span><b>${save.data.gear.length}</b></div>`;if(t==="map")$("sheetBody").innerHTML="<h2>マップ凡例</h2><p>緑：現在地<br>赤：敵<br>黄：ショップ<br>白：宝箱<br>赤い階段：出口</p>";if(t==="help")$("sheetBody").innerHTML="<h2>操作</h2><p>タップ：移動<br>1本指ドラッグ：見渡す<br>2本指：拡大縮小<br>ダブルタップ：主人公へ戻る</p>";$("sheet").classList.remove("hidden")};
+document.querySelector(".room-grid").onclick=e=>{const b=e.target.closest("[data-room]");if(!b)return;const r=b.dataset.room;if(r==="bed"){if(save.data.gold<100)return $("roomPanel").innerHTML="<h2>G不足</h2><p>ベッド利用料は100G。</p>";save.update({gold:save.data.gold-100,hp:save.data.maxHp});$("roomPanel").innerHTML="<h2>全回復した！</h2>"}if(r==="merchant")merchant();if(r==="storage")$("roomPanel").innerHTML=`<h2>倉庫</h2><p>回復薬 ${save.data.inventory.potion}<br>捕獲結晶 ${save.data.inventory.capture}<br>装備 ${save.data.gear.length}</p>`;if(r==="rumor")$("roomPanel").innerHTML=`<h2>深淵の噂</h2><p>${save.data.floor+1}階では敵が少し強くなるらしい。</p>`};
+function fps(now){frames++;if(now-fpsStart>=500){$("fpsText").textContent=`${Math.round(frames*1000/(now-fpsStart))} FPS`;frames=0;fpsStart=now}requestAnimationFrame(fps)}
+renderHome();if(save.data.inRun)start();else show("homeScreen");requestAnimationFrame(fps);
