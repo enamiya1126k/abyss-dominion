@@ -1,4 +1,4 @@
-const VERSION="0.0.8",KEY="abyss-dominion-v006",TILE=48,COLS=31,ROWS=31;
+const VERSION="0.0.9",KEY="abyss-dominion-v006",TILE=48,COLS=31,ROWS=31;
 const SPECIES={
 slime:{name:"スライム",color:"#67d273",hp:46,atk:6,def:1,spd:10,skill:"ぷるぷる体当たり"},
 goblin:{name:"ゴブリン",color:"#a18c58",hp:52,atk:9,def:2,spd:15,skill:"二段斬り"},
@@ -77,13 +77,78 @@ walk(x,y){return x>=0&&y>=0&&x<this.w&&y<this.h&&!this.t[y][x]}
 function path(world,start,goal){if(!world.walk(goal.x,goal.y))return[];const k=p=>p.x+","+p.y,q=[{x:start.x,y:start.y}],seen=new Set([k(start)]),prev=new Map();while(q.length){const c=q.shift();if(c.x===goal.x&&c.y===goal.y)break;for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const n={x:c.x+dx,y:c.y+dy};if(!world.walk(n.x,n.y)||seen.has(k(n)))continue;seen.add(k(n));prev.set(k(n),c);q.push(n)}}if(!seen.has(k(goal)))return[];const out=[];let c=goal;while(c.x!==start.x||c.y!==start.y){out.push(c);c=prev.get(k(c))}return out.reverse()}
 class E{constructor(x,y){this.x=x;this.y=y;this.rx=x;this.ry=y;this.path=[];this.p=0}setPath(p){this.path=p;this.p=0}move(dt,s){if(!this.path.length)return false;const t=this.path[0];this.p+=dt*s;const n=Math.min(1,this.p);this.rx=this.x+(t.x-this.x)*n;this.ry=this.y+(t.y-this.y)*n;if(this.p>=1){this.x=t.x;this.y=t.y;this.rx=this.x;this.ry=this.y;this.path.shift();this.p=0;return true}return false}}
 class Camera{
-constructor(c){this.c=c;this.x=TILE;this.y=TILE;this.z=.85;this.ox=0;this.oy=0;this.manual=false}
-world(wx,wy){return{x:(wx-this.x)*this.z+this.c.width/2+this.ox,y:(wy-this.y)*this.z+this.c.height/2+this.oy}}
-screen(sx,sy){return{x:(sx-this.c.width/2-this.ox)/this.z+this.x,y:(sy-this.c.height/2-this.oy)/this.z+this.y}}
-pan(dx,dy){this.ox+=dx;this.oy+=dy;this.manual=true}
-reset(px,py){this.x=px;this.y=py;this.ox=0;this.oy=0;this.z=.85;this.manual=false}
-follow(px,py){if(this.manual)return;const pos=this.world(px,py),left=this.c.width*.35,right=this.c.width*.65,top=this.c.height*.35,bottom=this.c.height*.65;if(pos.x<left)this.x+=(pos.x-left)/this.z*.12;if(pos.x>right)this.x+=(pos.x-right)/this.z*.12;if(pos.y<top)this.y+=(pos.y-top)/this.z*.12;if(pos.y>bottom)this.y+=(pos.y-bottom)/this.z*.12}
-clamp(world){const pad=28,mapW=world.w*TILE*this.z,mapH=world.h*TILE*this.z;const minOX=this.c.width-pad-mapW/2+this.x*this.z,maxOX=pad-mapW/2+this.x*this.z;const minOY=this.c.height-pad-mapH/2+this.y*this.z,maxOY=pad-mapH/2+this.y*this.z;this.ox=Math.max(Math.min(minOX,maxOX),Math.min(Math.max(minOX,maxOX),this.ox));this.oy=Math.max(Math.min(minOY,maxOY),Math.min(Math.max(minOY,maxOY),this.oy))}
+constructor(c){
+  this.c=c;
+  this.x=TILE;
+  this.y=TILE;
+  this.z=.85;
+  this.ox=0;
+  this.oy=0;
+  this.manual=false;
+}
+world(wx,wy){
+  return{
+    x:(wx-this.x)*this.z+this.c.width/2+this.ox,
+    y:(wy-this.y)*this.z+this.c.height/2+this.oy
+  };
+}
+screen(sx,sy){
+  return{
+    x:(sx-this.c.width/2-this.ox)/this.z+this.x,
+    y:(sy-this.c.height/2-this.oy)/this.z+this.y
+  };
+}
+pan(dx,dy){
+  this.ox+=dx;
+  this.oy+=dy;
+  this.manual=true;
+}
+reset(px,py){
+  this.x=px;
+  this.y=py;
+  this.ox=0;
+  this.oy=0;
+  this.z=.85;
+  this.manual=false;
+}
+follow(px,py){
+  if(this.manual)return;
+  const pos=this.world(px,py);
+  const left=this.c.width*.34;
+  const right=this.c.width*.66;
+  const top=this.c.height*.34;
+  const bottom=this.c.height*.66;
+
+  if(pos.x<left)this.x+=(pos.x-left)/this.z*.12;
+  if(pos.x>right)this.x+=(pos.x-right)/this.z*.12;
+  if(pos.y<top)this.y+=(pos.y-top)/this.z*.12;
+  if(pos.y>bottom)this.y+=(pos.y-bottom)/this.z*.12;
+}
+clamp(world){
+  const edge=30;
+  const mapWidth=world.w*TILE*this.z;
+  const mapHeight=world.h*TILE*this.z;
+
+  const mapLeft=this.c.width/2-this.x*this.z;
+  const mapTop=this.c.height/2-this.y*this.z;
+
+  const minOffsetX=edge-(mapLeft+mapWidth);
+  const maxOffsetX=this.c.width-edge-mapLeft;
+  const minOffsetY=edge-(mapTop+mapHeight);
+  const maxOffsetY=this.c.height-edge-mapTop;
+
+  if(mapWidth<=this.c.width-edge*2){
+    this.ox=(this.c.width-mapWidth)/2-mapLeft;
+  }else{
+    this.ox=Math.max(minOffsetX,Math.min(maxOffsetX,this.ox));
+  }
+
+  if(mapHeight<=this.c.height-edge*2){
+    this.oy=(this.c.height-mapHeight)/2-mapTop;
+  }else{
+    this.oy=Math.max(minOffsetY,Math.min(maxOffsetY,this.oy));
+  }
+}
 }
 let world,player,enemies=[],camera,ctx,run=false,last=0,input={pts:new Map(),last:null,pinch:null,drag:false,tap:0};
 
@@ -97,10 +162,10 @@ function setExplorationPaused(paused){
   explorationPaused=paused;
   document.querySelector(".canvas-wrap")?.classList.toggle("map-paused",paused);
 }
-function startExplore(){show("explore");hud();setExplorationPaused(false);world=new World().generate(state.floor>=state.nextShopFloor);player=new E(1,1);enemies=[];for(let i=0;i<5;i++)spawn();const c=$("canvas"),r=c.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);c.width=r.width*d;c.height=r.height*d;ctx=c.getContext("2d");const mm=$("minimap");mm.width=132*d;mm.height=132*d;camera=new Camera(c);camera.reset(TILE,TILE);bindInput(c);applyMinimapSetting();run=true;last=performance.now();requestAnimationFrame(loop)}
+function startExplore(){show("explore");hud();setExplorationPaused(false);world=new World().generate(state.floor>=state.nextShopFloor);player=new E(1,1);enemies=[];for(let i=0;i<5;i++)spawn();const c=$("canvas"),r=c.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);c.width=r.width*d;c.height=r.height*d;ctx=c.getContext("2d");const mm=$("minimap");mm.width=132*d;mm.height=132*d;camera=new Camera(c);camera.reset(TILE,TILE);camera.clamp(world);bindInput(c);applyMinimapSetting();run=true;last=performance.now();requestAnimationFrame(loop)}
 function stopExplore(){run=false;unbindInput($("canvas"))}
 function spawn(){const cells=world.cells().filter(c=>c.x+c.y>8&&!enemies.some(e=>e.x===c.x&&e.y===c.y));const p=cells[Math.floor(Math.random()*cells.length)],types=Object.keys(SPECIES),sp=types[Math.floor(Math.random()*types.length)];const e=new E(p.x,p.y);e.species=sp;e.level=Math.max(1,state.floor+Math.floor(Math.random()*5)-1);e.patrol=1;e.repath=0;enemies.push(e)}
-function bindInput(c){c.onpointerdown=e=>{c.setPointerCapture?.(e.pointerId);input.pts.set(e.pointerId,{x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY});input.last={x:e.clientX,y:e.clientY};input.drag=false};c.onpointermove=e=>{const p=input.pts.get(e.pointerId);if(!p)return;p.x=e.clientX;p.y=e.clientY;const pts=[...input.pts.values()];if(pts.length===1){const dx=e.clientX-input.last.x,dy=e.clientY-input.last.y;if(Math.hypot(e.clientX-p.sx,e.clientY-p.sy)>7)input.drag=true;if(input.drag){camera.pan(dx*(c.width/c.clientWidth),dy*(c.height/c.clientHeight));camera.clamp(world)}input.last={x:e.clientX,y:e.clientY}}else if(pts.length===2){input.drag=true;const dis=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);if(input.pinch)camera.z=Math.max(.45,Math.min(1.55,camera.z*dis/input.pinch));input.pinch=dis;camera.clamp(world)}};c.onpointerup=e=>{const p=input.pts.get(e.pointerId);if(!p)return;input.pts.delete(e.pointerId);if(input.pts.size<2)input.pinch=null;if(!input.drag){const now=performance.now();if(now-input.tap<280){camera.reset(player.rx*TILE,player.ry*TILE);input.tap=0}else{tapMove(e);input.tap=now}}}}
+function bindInput(c){c.onpointerdown=e=>{c.setPointerCapture?.(e.pointerId);input.pts.set(e.pointerId,{x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY});input.last={x:e.clientX,y:e.clientY};input.drag=false};c.onpointermove=e=>{const p=input.pts.get(e.pointerId);if(!p)return;p.x=e.clientX;p.y=e.clientY;const pts=[...input.pts.values()];if(pts.length===1){const dx=e.clientX-input.last.x,dy=e.clientY-input.last.y;if(Math.hypot(e.clientX-p.sx,e.clientY-p.sy)>7)input.drag=true;if(input.drag){camera.pan(dx*(c.width/c.clientWidth),dy*(c.height/c.clientHeight));camera.clamp(world)}input.last={x:e.clientX,y:e.clientY}}else if(pts.length===2){input.drag=true;const dis=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);if(input.pinch)camera.z=Math.max(.45,Math.min(1.55,camera.z*dis/input.pinch));input.pinch=dis;camera.clamp(world)}};c.onpointerup=e=>{const p=input.pts.get(e.pointerId);if(!p)return;input.pts.delete(e.pointerId);if(input.pts.size<2)input.pinch=null;if(!input.drag){const now=performance.now();if(now-input.tap<280){camera.reset(player.rx*TILE,player.ry*TILE);camera.clamp(world);input.tap=0}else{tapMove(e);input.tap=now}}}}
 function unbindInput(c){c.onpointerdown=c.onpointermove=c.onpointerup=null}
 function tapMove(e){if(explorationPaused)return;const c=$("canvas"),r=c.getBoundingClientRect(),sx=(e.clientX-r.left)*(c.width/r.width),sy=(e.clientY-r.top)*(c.height/r.height),w=camera.screen(sx,sy),g={x:Math.floor(w.x/TILE),y:Math.floor(w.y/TILE)};if(!world.walk(g.x,g.y))return;player.setPath(path(world,player,g))}
 function loop(now){if(!run)return;const dt=Math.min(.05,(now-last)/1000||0);last=now;update(dt);draw();requestAnimationFrame(loop)}
