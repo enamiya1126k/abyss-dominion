@@ -1,4 +1,4 @@
-const VERSION="0.0.9",KEY="abyss-dominion-v006",TILE=48,COLS=31,ROWS=31;
+const VERSION="0.1.0",KEY="abyss-dominion-v006",TILE=48,COLS=31,ROWS=31;
 const SPECIES={
 slime:{name:"スライム",color:"#67d273",hp:46,atk:6,def:1,spd:10,skill:"ぷるぷる体当たり"},
 goblin:{name:"ゴブリン",color:"#a18c58",hp:52,atk:9,def:2,spd:15,skill:"二段斬り"},
@@ -20,6 +20,7 @@ function totalMaxHp(m){let v=maxHp(m);for(const gid of Object.values(m.equipment
 let state=load();
 state.settings??={};
 if(typeof state.settings.minimapVisible!=="boolean")state.settings.minimapVisible=true;
+if(typeof state.settings.autoBattle!=="boolean")state.settings.autoBattle=true;
 if(!state.party?.length)state.party=state.monsters.slice(0,4).map(m=>m.id);
 normalize();
 let explorationPaused=false;
@@ -151,6 +152,8 @@ clamp(world){
 }
 }
 let world,player,enemies=[],camera,ctx,run=false,last=0,input={pts:new Map(),last:null,pinch:null,drag:false,tap:0};
+let exploreSnapshot=null;
+let activeEncounterEnemy=null;
 
 function applyMinimapSetting(){
   const map=$("minimap"),button=$("minimapToggle");
@@ -162,15 +165,75 @@ function setExplorationPaused(paused){
   explorationPaused=paused;
   document.querySelector(".canvas-wrap")?.classList.toggle("map-paused",paused);
 }
-function startExplore(){show("explore");hud();setExplorationPaused(false);world=new World().generate(state.floor>=state.nextShopFloor);player=new E(1,1);enemies=[];for(let i=0;i<5;i++)spawn();const c=$("canvas"),r=c.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);c.width=r.width*d;c.height=r.height*d;ctx=c.getContext("2d");const mm=$("minimap");mm.width=132*d;mm.height=132*d;camera=new Camera(c);camera.reset(TILE,TILE);camera.clamp(world);bindInput(c);applyMinimapSetting();run=true;last=performance.now();requestAnimationFrame(loop)}
+function startExplore(options={}){
+  const restore=options.restore??false;
+  show("explore");
+  hud();
+
+  if(!restore||!exploreSnapshot){
+    world=new World().generate(state.floor>=state.nextShopFloor);
+    player=new E(1,1);
+    enemies=[];
+    for(let i=0;i<5;i++)spawn();
+  }else{
+    world=exploreSnapshot.world;
+    player=exploreSnapshot.player;
+    enemies=exploreSnapshot.enemies;
+  }
+
+  const c=$("canvas"),r=c.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);
+  c.width=r.width*d;
+  c.height=r.height*d;
+  ctx=c.getContext("2d");
+
+  const mm=$("minimap");
+  mm.width=132*d;
+  mm.height=132*d;
+
+  camera=new Camera(c);
+
+  if(restore&&exploreSnapshot?.camera){
+    camera.x=exploreSnapshot.camera.x;
+    camera.y=exploreSnapshot.camera.y;
+    camera.z=exploreSnapshot.camera.z;
+    camera.ox=exploreSnapshot.camera.ox;
+    camera.oy=exploreSnapshot.camera.oy;
+    camera.manual=exploreSnapshot.camera.manual;
+    camera.clamp(world);
+  }else{
+    camera.reset(TILE,TILE);
+    camera.clamp(world);
+  }
+
+  bindInput(c);
+  applyMinimapSetting();
+  run=true;
+  last=performance.now();
+  requestAnimationFrame(loop);
+}
 function stopExplore(){run=false;unbindInput($("canvas"))}
 function spawn(){const cells=world.cells().filter(c=>c.x+c.y>8&&!enemies.some(e=>e.x===c.x&&e.y===c.y));const p=cells[Math.floor(Math.random()*cells.length)],types=Object.keys(SPECIES),sp=types[Math.floor(Math.random()*types.length)];const e=new E(p.x,p.y);e.species=sp;e.level=Math.max(1,state.floor+Math.floor(Math.random()*5)-1);e.patrol=1;e.repath=0;enemies.push(e)}
 function bindInput(c){c.onpointerdown=e=>{c.setPointerCapture?.(e.pointerId);input.pts.set(e.pointerId,{x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY});input.last={x:e.clientX,y:e.clientY};input.drag=false};c.onpointermove=e=>{const p=input.pts.get(e.pointerId);if(!p)return;p.x=e.clientX;p.y=e.clientY;const pts=[...input.pts.values()];if(pts.length===1){const dx=e.clientX-input.last.x,dy=e.clientY-input.last.y;if(Math.hypot(e.clientX-p.sx,e.clientY-p.sy)>7)input.drag=true;if(input.drag){camera.pan(dx*(c.width/c.clientWidth),dy*(c.height/c.clientHeight));camera.clamp(world)}input.last={x:e.clientX,y:e.clientY}}else if(pts.length===2){input.drag=true;const dis=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);if(input.pinch)camera.z=Math.max(.45,Math.min(1.55,camera.z*dis/input.pinch));input.pinch=dis;camera.clamp(world)}};c.onpointerup=e=>{const p=input.pts.get(e.pointerId);if(!p)return;input.pts.delete(e.pointerId);if(input.pts.size<2)input.pinch=null;if(!input.drag){const now=performance.now();if(now-input.tap<280){camera.reset(player.rx*TILE,player.ry*TILE);camera.clamp(world);input.tap=0}else{tapMove(e);input.tap=now}}}}
 function unbindInput(c){c.onpointerdown=c.onpointermove=c.onpointerup=null}
 function tapMove(e){if(explorationPaused)return;const c=$("canvas"),r=c.getBoundingClientRect(),sx=(e.clientX-r.left)*(c.width/r.width),sy=(e.clientY-r.top)*(c.height/r.height),w=camera.screen(sx,sy),g={x:Math.floor(w.x/TILE),y:Math.floor(w.y/TILE)};if(!world.walk(g.x,g.y))return;player.setPath(path(world,player,g))}
 function loop(now){if(!run)return;const dt=Math.min(.05,(now-last)/1000||0);last=now;update(dt);draw();requestAnimationFrame(loop)}
-function update(dt){if(explorationPaused)return;if(player.move(dt,5)){for(const c of world.chests)if(!c.open&&c.x===player.x&&c.y===player.y){c.open=true;randomChest()}if(world.shop&&player.x===world.shop.x&&player.y===world.shop.y){stopExplore();state.nextShopFloor=state.floor+3+Math.floor(Math.random()*5);save();show("shop");return}if(player.x===world.exit.x&&player.y===world.exit.y){state.floor++;state.maxFloor=Math.max(state.maxFloor,state.floor);if(state.floor%10===0)state.checkpoint=state.floor;save();startExplore();return}}
-for(const e of enemies){e.patrol-=dt;e.repath-=dt;const d=Math.abs(e.x-player.x)+Math.abs(e.y-player.y);if(d<=5&&e.repath<=0){e.setPath(path(world,e,player).slice(0,8));e.repath=.5}else if(d>5&&e.patrol<=0&&!e.path.length){const n=[[1,0],[-1,0],[0,1],[0,-1]].map(([x,y])=>({x:e.x+x,y:e.y+y})).filter(p=>world.walk(p.x,p.y));if(n.length)e.setPath([n[Math.floor(Math.random()*n.length)]]);e.patrol=1+Math.random()*2}if(e.move(dt,d<=5?2.7:1.5)&&e.x===player.x&&e.y===player.y){stopExplore();beginBattle(e);return}}
+function update(dt){if(explorationPaused)return;if(player.move(dt,5)){for(const c of world.chests)if(!c.open&&c.x===player.x&&c.y===player.y){c.open=true;randomChest()}if(world.shop&&player.x===world.shop.x&&player.y===world.shop.y){stopExplore();state.nextShopFloor=state.floor+3+Math.floor(Math.random()*5);save();show("shop");return}if(player.x===world.exit.x&&player.y===world.exit.y){exploreSnapshot=null;activeEncounterEnemy=null;state.floor++;state.maxFloor=Math.max(state.maxFloor,state.floor);if(state.floor%10===0)state.checkpoint=state.floor;save();startExplore();return}}
+for(const e of enemies){e.patrol-=dt;e.repath-=dt;const d=Math.abs(e.x-player.x)+Math.abs(e.y-player.y);if(d<=5&&e.repath<=0){e.setPath(path(world,e,player).slice(0,8));e.repath=.5}else if(d>5&&e.patrol<=0&&!e.path.length){const n=[[1,0],[-1,0],[0,1],[0,-1]].map(([x,y])=>({x:e.x+x,y:e.y+y})).filter(p=>world.walk(p.x,p.y));if(n.length)e.setPath([n[Math.floor(Math.random()*n.length)]]);e.patrol=1+Math.random()*2}if(e.move(dt,d<=5?2.7:1.5)&&e.x===player.x&&e.y===player.y){
+  activeEncounterEnemy=e;
+  exploreSnapshot={
+    world,
+    player,
+    enemies,
+    camera:{
+      x:camera.x,y:camera.y,z:camera.z,
+      ox:camera.ox,oy:camera.oy,
+      manual:camera.manual
+    }
+  };
+  stopExplore();
+  beginBattle(e);
+  return
+}}
 camera.follow(player.rx*TILE,player.ry*TILE);camera.clamp(world);hud()}
 function draw(){ctx.fillStyle="#120c18";ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);for(let y=0;y<world.h;y++)for(let x=0;x<world.w;x++){const p=camera.world(x*TILE,y*TILE),s=TILE*camera.z;ctx.fillStyle=world.t[y][x]?"#2c2036":"#6a4a7f";ctx.fillRect(p.x,p.y,s+1,s+1);if(!world.t[y][x]){ctx.strokeStyle="rgba(255,255,255,.08)";ctx.strokeRect(p.x,p.y,s,s)}}emoji(world.exit,"🪜");if(world.shop)emoji(world.shop,"🚪");world.chests.forEach(c=>!c.open&&emoji(c,"🎁"));enemies.forEach(e=>circle(e.rx,e.ry,SPECIES[e.species].color,`${SPECIES[e.species].name}\nLv.${e.level}`));circle(player.rx,player.ry,"#69e17c","");drawMini()}
 function emoji(o,t){const p=camera.world(o.x*TILE,o.y*TILE);ctx.font=`${28*camera.z}px sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(t,p.x+TILE*camera.z/2,p.y+TILE*camera.z/2)}
@@ -178,7 +241,34 @@ function circle(x,y,color,text){const p=camera.world(x*TILE,y*TILE);ctx.fillStyl
 function drawMini(){const c=$("minimap").getContext("2d"),cell=Math.min(c.canvas.width/world.w,c.canvas.height/world.h);c.fillStyle="#130c18";c.fillRect(0,0,c.canvas.width,c.canvas.height);for(let y=0;y<world.h;y++)for(let x=0;x<world.w;x++){c.fillStyle=world.t[y][x]?"#33243d":"#b178d0";c.fillRect(x*cell,y*cell,cell,cell)}c.fillStyle="#ff5d66";c.fillRect(world.exit.x*cell,world.exit.y*cell,cell,cell);if(world.shop){c.fillStyle="#ffe15d";c.fillRect(world.shop.x*cell,world.shop.y*cell,cell,cell)}c.fillStyle="#ef6c72";enemies.forEach(e=>c.fillRect(e.x*cell,e.y*cell,cell,cell));c.fillStyle="#5dff82";c.fillRect(player.x*cell,player.y*cell,cell,cell)}
 function randomChest(){const r=Math.random();if(r<.3){state.gold+=80+state.floor*5;loot("💰","宝箱",`${80+state.floor*5}Gを獲得`)}else if(r<.5){state.items.capture++;loot("💎","捕獲結晶","捕獲結晶 ×1")}else{const g=randomGear();state.gear.push(g);loot("⚔️",`[${g.rarity}] ${g.name}`,Object.entries(g.stats).map(([k,v])=>`${labelStat(k)}+${v}`).join(" "))}save()}
 let battleState=null;
-function beginBattle(enemy){const base=SPECIES[enemy.species];battleState={enemy:{species:enemy.species,name:base.name,level:enemy.level,maxHp:Math.floor(base.hp+enemy.level*8),hp:Math.floor(base.hp+enemy.level*8),atk:Math.floor(base.atk+enemy.level*1.5),def:Math.floor(base.def+enemy.level*.6),spd:base.spd,guard:false},turn:1,index:0,auto:false,speed:1,guard:false};$("battle").classList.remove("hidden");renderBattle()}
+function beginBattle(enemy){
+  const base=SPECIES[enemy.species];
+  battleState={
+    enemy:{
+      species:enemy.species,
+      name:base.name,
+      level:enemy.level,
+      maxHp:Math.floor(base.hp+enemy.level*8),
+      hp:Math.floor(base.hp+enemy.level*8),
+      atk:Math.floor(base.atk+enemy.level*1.5),
+      def:Math.floor(base.def+enemy.level*.6),
+      spd:base.spd,
+      guard:false
+    },
+    turn:1,
+    index:0,
+    auto:state.settings.autoBattle,
+    speed:1,
+    guard:false
+  };
+  $("battle").classList.remove("hidden");
+  $("autoBtn").textContent=`AUTO ${battleState.auto?"ON":"OFF"}`;
+  renderBattle();
+
+  if(battleState.auto){
+    setTimeout(()=>command("attack"),420);
+  }
+}
 function actor(){const alive=party().filter(m=>m.hp>0);if(!alive.length)return null;battleState.index%=alive.length;return alive[battleState.index]}
 function renderBattle(){const e=battleState.enemy,a=actor();$("turnNo").textContent=battleState.turn;$("enemyName").textContent=`${e.name} Lv.${e.level}`;$("enemyIcon").style.background=SPECIES[e.species].color;$("enemyHpFill").style.width=`${e.hp/e.maxHp*100}%`;$("enemyHpText").textContent=`${e.hp}/${e.maxHp}`;$("actorName").textContent=a?`${a.name}のターン`:"全滅";$("battleParty").innerHTML=party().map(m=>`<div class="battle-unit ${a?.id===m.id?"active":""} ${m.hp<=0?"dead":""}"><b>${m.name} Lv.${m.level}+${m.plus}</b><div class="stats">HP ${m.hp}/${totalMaxHp(m)}　SPD ${stat(m,"spd")}</div><div class="bar unit-bar"><i style="width:${m.hp/totalMaxHp(m)*100}%"></i></div></div>`).join("");$("battleHint").textContent=`捕獲結晶 ${state.items.capture}`;hud()}
 function effect(t,color="#fff"){$("battleEffect").textContent=t;$("battleEffect").style.color=color;setTimeout(()=>$("battleEffect").textContent="",500/battleState.speed)}
@@ -186,13 +276,48 @@ document.querySelector(".commands").onclick=e=>{const b=e.target.closest("[data-
 function command(cmd){if(!battleState||!actor())return;const a=actor(),en=battleState.enemy;if(cmd==="attack"){const dmg=Math.max(1,Math.floor(stat(a,"atk")*(.9+Math.random()*.25)-en.def*.45));en.hp=Math.max(0,en.hp-dmg);effect(`-${dmg}`,"#ffe276")}if(cmd==="guard"){battleState.guard=true;effect("GUARD","#9ed4ff")}if(cmd==="skill"){if(a.species==="fairy"){const heal=Math.floor(totalMaxHp(a)*.3);party().forEach(m=>m.hp=Math.min(totalMaxHp(m),m.hp+heal));effect(`全体回復 +${heal}`,"#79ee94")}else{const dmg=Math.max(2,Math.floor(stat(a,"atk")*1.55-en.def*.35));en.hp=Math.max(0,en.hp-dmg);effect(`${SPECIES[a.species].skill} -${dmg}`,"#ff9a61")}}if(cmd==="item"){if(state.items.potion<=0)return alert("回復薬がない");state.items.potion--;a.hp=Math.min(totalMaxHp(a),a.hp+Math.floor(totalMaxHp(a)*.5));effect("回復！","#79ee94")}if(cmd==="capture"){return tryCapture()}save();if(en.hp<=0)return victory(false);setTimeout(enemyTurn,550/battleState.speed)}
 function enemyTurn(){const a=actor();if(!a)return defeat();const en=battleState.enemy,dmg=Math.max(1,Math.floor((en.atk-stat(a,"def")*.5)*(battleState.guard?.45:1)));a.hp=Math.max(0,a.hp-dmg);battleState.guard=false;effect(`味方 -${dmg}`,"#ff6877");if(!party().some(m=>m.hp>0))return setTimeout(defeat,500);battleState.index++;battleState.turn++;save();setTimeout(()=>{renderBattle();if(battleState.auto)command("attack")},500/battleState.speed)}
 function tryCapture(){if(state.items.capture<=0)return alert("捕獲結晶がない");state.items.capture--;const e=battleState.enemy,power=Math.max(...party().map(m=>m.level+m.stars*3+m.plus)),chance=Math.max(.05,Math.min(.85,.18+(1-e.hp/e.maxHp)*.55+(power-e.level)*.015));effect(`捕獲 ${Math.round(chance*100)}%`,"#9bdcff");save();if(Math.random()<chance){const m=mk(e.species,e.level,1);state.monsters.push(m);save();setTimeout(()=>victory(true),600)}else setTimeout(enemyTurn,600)}
-function victory(captured){const e=battleState.enemy,gold=20+e.level*6,soul=2+Math.floor(Math.random()*4);state.gold+=gold;state.souls[e.species]=(state.souls[e.species]||0)+soul;const ups=[];party().forEach(m=>{m.exp+=15+e.level*8;while(m.exp>=needExp(m.level)&&m.level<999){m.exp-=needExp(m.level);m.level++;m.hp=totalMaxHp(m);ups.push(`${m.name} Lv.${m.level}`)}});let drop=null;if(Math.random()<.28){drop=randomGear();state.gear.push(drop)}save();$("battle").classList.add("hidden");battleState=null;loot(captured?"✨":"🏆",captured?`${e.name}を捕獲！`:`${e.name}を撃破`,`${gold}G　魔魂×${soul}${drop?`<br>[${drop.rarity}] ${drop.name}`:""}${ups.length?`<br><span class="level-up">LEVEL UP：${ups.join("、")}</span>`:""}`)}
-function defeat(){$("battle").classList.add("hidden");const lost=Math.floor(state.gold*.5);state.gold-=lost;state.floor=state.checkpoint;party().forEach(m=>m.hp=totalMaxHp(m));save();battleState=null;alert(`全滅！ ${lost}G失った。${state.checkpoint}階へ戻る`);renderHome();show("home")}
+function removeEncounterEnemy(){
+  if(!activeEncounterEnemy||!exploreSnapshot)return;
+  exploreSnapshot.enemies=exploreSnapshot.enemies.filter(e=>e!==activeEncounterEnemy);
+  activeEncounterEnemy=null;
+}
+function clearEncounterWithoutRemoval(){
+  activeEncounterEnemy=null;
+}
+function victory(captured){removeEncounterEnemy();const e=battleState.enemy,gold=20+e.level*6,soul=2+Math.floor(Math.random()*4);state.gold+=gold;state.souls[e.species]=(state.souls[e.species]||0)+soul;const ups=[];party().forEach(m=>{m.exp+=15+e.level*8;while(m.exp>=needExp(m.level)&&m.level<999){m.exp-=needExp(m.level);m.level++;m.hp=totalMaxHp(m);ups.push(`${m.name} Lv.${m.level}`)}});let drop=null;if(Math.random()<.28){drop=randomGear();state.gear.push(drop)}save();$("battle").classList.add("hidden");battleState=null;loot(captured?"✨":"🏆",captured?`${e.name}を捕獲！`:`${e.name}を撃破`,`${gold}G　魔魂×${soul}${drop?`<br>[${drop.rarity}] ${drop.name}`:""}${ups.length?`<br><span class="level-up">LEVEL UP：${ups.join("、")}</span>`:""}`)}
+function defeat(){exploreSnapshot=null;activeEncounterEnemy=null;$("battle").classList.add("hidden");const lost=Math.floor(state.gold*.5);state.gold-=lost;state.floor=state.checkpoint;party().forEach(m=>m.hp=totalMaxHp(m));save();battleState=null;alert(`全滅！ ${lost}G失った。${state.checkpoint}階へ戻る`);renderHome();show("home")}
 function loot(icon,title,body){setExplorationPaused(true);$("lootIcon").textContent=icon;$("lootTitle").textContent=title;$("lootBody").innerHTML=body;$("loot").classList.remove("hidden")}
-$("lootClose").onclick=()=>{$("loot").classList.add("hidden");setExplorationPaused(false);if(state.inRun)startExplore();else{renderHome();show("home")}};
+$("lootClose").onclick=()=>{
+  $("loot").classList.add("hidden");
+  setExplorationPaused(false);
+  if(state.inRun){
+    startExplore({restore:!!exploreSnapshot});
+  }else{
+    exploreSnapshot=null;
+    renderHome();
+    show("home");
+  }
+};
 function randomGear(){const slots=["weapon","armor","accessory"],slot=slots[Math.floor(Math.random()*3)],rarities=["R","R","SR","SR","SSR"],rarity=rarities[Math.floor(Math.random()*rarities.length)],mult={R:1,SR:1.6,SSR:2.4}[rarity],names={weapon:["鉄の剣","魔爪","炎刃"],armor:["革鎧","魔布のローブ","竜鱗鎧"],accessory:["旅人の指輪","幸運の護符","捕獲師の耳飾り"]}[slot],name=names[Math.floor(Math.random()*names.length)],stats=slot==="weapon"?{atk:Math.ceil((3+Math.random()*5)*mult),crit:Math.ceil(Math.random()*4*mult)}:slot==="armor"?{hp:Math.ceil((10+Math.random()*18)*mult),def:Math.ceil((1+Math.random()*4)*mult)}:{spd:Math.ceil((1+Math.random()*3)*mult),capture:Math.ceil((2+Math.random()*5)*mult)};return gear(slot,name,rarity,stats)}
-$("autoBtn").onclick=()=>{battleState.auto=!battleState.auto;$("autoBtn").textContent=`AUTO ${battleState.auto?"ON":"OFF"}`;if(battleState.auto)command("attack")};$("speedBtn").onclick=()=>{battleState.speed=battleState.speed===1?1.5:battleState.speed===1.5?2:1;$("speedBtn").textContent=`×${battleState.speed.toFixed(1)}`};$("escapeBtn").onclick=()=>{const e=battleState.enemy,p=Math.max(.15,.75-e.level*.015);if(Math.random()<p){$("battle").classList.add("hidden");battleState=null;startExplore()}else{effect("逃走失敗","#ff6877");enemyTurn()}};
-$("startBtn").onclick=()=>{state.inRun=true;save();startExplore()};$("returnBtn").onclick=()=>{if(confirm("帰還する？")){stopExplore();state.inRun=false;save();renderHome();show("home")}};$("leaveShop").onclick=()=>startExplore();
+$("autoBtn").onclick=()=>{
+  battleState.auto=!battleState.auto;
+  state.settings.autoBattle=battleState.auto;
+  save();
+  $("autoBtn").textContent=`AUTO ${battleState.auto?"ON":"OFF"}`;
+  if(battleState.auto)command("attack");
+};$("speedBtn").onclick=()=>{battleState.speed=battleState.speed===1?1.5:battleState.speed===1.5?2:1;$("speedBtn").textContent=`×${battleState.speed.toFixed(1)}`};$("escapeBtn").onclick=()=>{
+  const e=battleState.enemy,p=Math.max(.15,.75-e.level*.015);
+  if(Math.random()<p){
+    $("battle").classList.add("hidden");
+    battleState=null;
+    clearEncounterWithoutRemoval();
+    startExplore({restore:true});
+  }else{
+    effect("逃走失敗","#ff6877");
+    enemyTurn();
+  }
+};
+$("startBtn").onclick=()=>{state.inRun=true;save();startExplore()};$("returnBtn").onclick=()=>{if(confirm("帰還する？")){stopExplore();exploreSnapshot=null;activeEncounterEnemy=null;state.inRun=false;save();renderHome();show("home")}};$("leaveShop").onclick=()=>startExplore();
 document.querySelector(".shop-grid").onclick=e=>{const b=e.target.closest("[data-shop]");if(!b)return;const t=b.dataset.shop;if(t==="bed"){if(state.gold<100)return alert("G不足");state.gold-=100;party().forEach(m=>m.hp=totalMaxHp(m));$("shopMessage").textContent="全回復した！"}if(t==="potion"){if(state.gold<50)return alert("G不足");state.gold-=50;state.items.potion++}if(t==="capture"){if(state.gold<80)return alert("G不足");state.gold-=80;state.items.capture++}if(t==="gear"){if(state.gold<180)return alert("G不足");state.gold-=180;state.gear.push(randomGear())}save()};
 
 $("minimapToggle").onclick=()=>{
