@@ -1,97 +1,11 @@
-/* ABYSS DOMINION
-   v0.0.1 Foundation
-   Browser reset
-*/
-
 *,
 *::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html {
-  width: 100%;
-  min-height: 100%;
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-  -webkit-tap-highlight-color: transparent;
-}
-
-body {
-  width: 100%;
-  min-height: 100%;
-  margin: 0;
-}
-
-body,
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-img,
-picture,
-svg,
-canvas,
-video {
-  display: block;
-  max-width: 100%;
-}
-
-button,
-input,
-select,
-textarea {
-  margin: 0;
-}
-
-button {
-  border: 0;
-  cursor: pointer;
-}
-
-button,
-a {
-  -webkit-touch-callout: none;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-ul,
-ol {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-p,
-figure,
-blockquote,
-dl,
-dd {
-  margin: 0;
-}
-
-table {
-  border-collapse: collapse;
-  border-spacing: 0;
-}
-
-textarea {
-  resize: vertical;
-}
-
-[hidden] {
-  display: none !important;
-}
+*::after{box-sizing:border-box}
+html{width:100%;height:100%;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+body{width:100%;height:100%;margin:0}
+body,button,input,select,textarea{font:inherit}
+button{border:0;cursor:pointer}
+img,svg,canvas{display:block;max-width:100%}
+h1,h2,h3,p,ul{margin:0}
+ul{padding:0;list-style:none}
+[hidden]{display:none!important}
