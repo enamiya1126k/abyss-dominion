@@ -145,3 +145,16 @@ button{background:#342342;border:1px solid #654d78;border-radius:13px;padding:10
     top:136px;
   }
 }
+
+/* v0.1.0 Adventure Continuity */
+.minimap-toggle{
+  opacity:.48;
+  transition:opacity .16s,transform .16s,background .16s;
+  background:#21162ab8;
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px);
+}
+.minimap-toggle:active,
+.minimap-toggle:focus-visible{
+  opacity:1;
+}
