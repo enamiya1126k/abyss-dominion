@@ -1,1 +1,3 @@
-export function canMove(x,y,map){return true;}
+export function canMove(x, y, world) {
+  return world.isWalkable(x, y);
+}
