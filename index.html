@@ -38,7 +38,7 @@
       </div>
 
       <div class="panel">
-        <h2>v0.0.6 Growth Update</h2>
+        <h2>v0.0.8 Growth Update</h2>
         <ul class="features">
           <li>敵接触でターン制戦闘</li>
           <li>撃破で経験値・魔魂・装備ドロップ</li>
@@ -65,12 +65,13 @@
           <div class="bar"><i id="partyHpFill"></i></div>
           <b id="partyHpText"></b>
         </div>
-        <div class="version">v0.0.6<br><span id="fps">-- FPS</span></div>
+        <div class="version">v0.0.8<br><span id="fps">-- FPS</span></div>
       </header>
 
       <div class="canvas-wrap">
         <canvas id="canvas"></canvas>
         <canvas id="minimap"></canvas>
+        <button id="minimapToggle" class="minimap-toggle" aria-label="ミニマップ表示切替">MAP ON</button>
         <div id="toast" class="toast hidden"></div>
       </div>
 
@@ -136,7 +137,7 @@
     </div>
   </div>
 
-  <div id="loot" class="loot hidden">
+  <div id="loot" class="loot hidden" aria-modal="true">
     <div class="loot-card">
       <div id="lootIcon" class="loot-icon"></div>
       <div id="lootTitle" class="loot-title"></div>
