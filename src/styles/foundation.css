@@ -1,0 +1,10 @@
+/* v0.0.1 Foundation Part 1 */
+.foundation-scene{overflow-y:auto}
+.foundation-content{width:min(100%,680px);margin:0 auto;padding:14px 14px 28px}
+.foundation-hero{display:grid;gap:16px}
+.foundation-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0}
+.foundation-grid .card{display:grid;gap:6px}
+.foundation-grid strong{font-size:1.45rem}
+.camera-readout{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:14px 0}
+.camera-readout span{padding:9px;text-align:center;background:#140d1b;border:1px solid var(--border);border-radius:12px;color:var(--sub)}
+.input-test-area{min-height:260px;display:grid;place-items:center;margin:12px 0;padding:20px;text-align:center;color:var(--sub);background:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px),#0d0913;background-size:32px 32px;border:1px solid var(--border);border-radius:var(--radius);user-select:none}
