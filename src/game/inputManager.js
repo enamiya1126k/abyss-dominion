@@ -6,11 +6,13 @@ export class InputManager {
     this.callbacks = {};
     this.pointers = new Map();
     this.lastPoint = null;
-    this.lastPinch = null;
-    this.lastTap = 0;
-    this.down = this.down.bind(this);
-    this.move = this.move.bind(this);
-    this.up = this.up.bind(this);
+    this.lastPinchDistance = null;
+    this.lastTapAt = 0;
+    this.moved = false;
+
+    this.pointerDown = this.pointerDown.bind(this);
+    this.pointerMove = this.pointerMove.bind(this);
+    this.pointerUp = this.pointerUp.bind(this);
   }
 
   attach(element, callbacks = {}) {
@@ -18,68 +20,80 @@ export class InputManager {
     this.element = element;
     this.callbacks = callbacks;
     element.style.touchAction = "none";
-    element.addEventListener("pointerdown", this.down);
-    element.addEventListener("pointermove", this.move);
-    element.addEventListener("pointerup", this.up);
-    element.addEventListener("pointercancel", this.up);
+    element.addEventListener("pointerdown", this.pointerDown);
+    element.addEventListener("pointermove", this.pointerMove);
+    element.addEventListener("pointerup", this.pointerUp);
+    element.addEventListener("pointercancel", this.pointerUp);
   }
 
   detach() {
     if (!this.element) return;
-    this.element.removeEventListener("pointerdown", this.down);
-    this.element.removeEventListener("pointermove", this.move);
-    this.element.removeEventListener("pointerup", this.up);
-    this.element.removeEventListener("pointercancel", this.up);
+    this.element.removeEventListener("pointerdown", this.pointerDown);
+    this.element.removeEventListener("pointermove", this.pointerMove);
+    this.element.removeEventListener("pointerup", this.pointerUp);
+    this.element.removeEventListener("pointercancel", this.pointerUp);
     this.element = null;
     this.pointers.clear();
   }
 
-  down(event) {
+  pointerDown(event) {
     this.element.setPointerCapture?.(event.pointerId);
     this.pointers.set(event.pointerId, {
-      x: event.clientX, y: event.clientY,
-      startX: event.clientX, startY: event.clientY
+      x: event.clientX,
+      y: event.clientY,
+      startX: event.clientX,
+      startY: event.clientY,
     });
-    if (this.pointers.size === 1) this.lastPoint = { x: event.clientX, y: event.clientY };
+    this.lastPoint = { x: event.clientX, y: event.clientY };
+    this.moved = false;
   }
 
-  move(event) {
+  pointerMove(event) {
     const pointer = this.pointers.get(event.pointerId);
     if (!pointer) return;
     pointer.x = event.clientX;
     pointer.y = event.clientY;
+
     const points = [...this.pointers.values()];
 
     if (points.length === 1 && this.lastPoint) {
-      this.callbacks.onPan?.({
-        deltaX: event.clientX - this.lastPoint.x,
-        deltaY: event.clientY - this.lastPoint.y
-      });
+      const dx = event.clientX - this.lastPoint.x;
+      const dy = event.clientY - this.lastPoint.y;
+      if (Math.hypot(event.clientX - pointer.startX, event.clientY - pointer.startY) > CAMERA_CONFIG.dragThreshold) {
+        this.moved = true;
+      }
+      if (this.moved) this.callbacks.onPan?.({ deltaX: dx, deltaY: dy });
       this.lastPoint = { x: event.clientX, y: event.clientY };
     }
 
     if (points.length === 2) {
-      const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
-      if (this.lastPinch) this.callbacks.onPinch?.({ scale: distance / this.lastPinch });
-      this.lastPinch = distance;
+      this.moved = true;
+      const distance = Math.hypot(
+        points[0].x - points[1].x,
+        points[0].y - points[1].y
+      );
+      if (this.lastPinchDistance) {
+        this.callbacks.onPinch?.({ scale: distance / this.lastPinchDistance });
+      }
+      this.lastPinchDistance = distance;
     }
   }
 
-  up(event) {
+  pointerUp(event) {
     const pointer = this.pointers.get(event.pointerId);
     if (!pointer) return;
-    const movement = Math.hypot(event.clientX - pointer.startX, event.clientY - pointer.startY);
-    this.pointers.delete(event.pointerId);
-    if (this.pointers.size < 2) this.lastPinch = null;
 
-    if (movement <= CAMERA_CONFIG.dragThreshold) {
+    this.pointers.delete(event.pointerId);
+    if (this.pointers.size < 2) this.lastPinchDistance = null;
+
+    if (!this.moved) {
       const now = performance.now();
-      if (now - this.lastTap <= CAMERA_CONFIG.doubleTapDelayMs) {
-        this.callbacks.onDoubleTap?.();
-        this.lastTap = 0;
+      if (now - this.lastTapAt <= CAMERA_CONFIG.doubleTapDelayMs) {
+        this.callbacks.onDoubleTap?.({ x: event.clientX, y: event.clientY });
+        this.lastTapAt = 0;
       } else {
         this.callbacks.onTap?.({ x: event.clientX, y: event.clientY });
-        this.lastTap = now;
+        this.lastTapAt = now;
       }
     }
   }
