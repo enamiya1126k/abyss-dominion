@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+  >
+  <meta name="theme-color" content="#09060d">
+  <meta name="description" content="地下1000階を探索するモンスター育成RPG">
+  <title>ABYSS DOMINION</title>
+
+  <link rel="stylesheet" href="./src/styles/reset.css">
+  <link rel="stylesheet" href="./src/styles/theme.css">
+  <link rel="stylesheet" href="./src/styles/app.css">
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="app-header">
+      <div>
+        <p class="app-eyebrow">ABYSS DOMINION</p>
+        <h1 class="app-title">地下1000階の魔王</h1>
+      </div>
+
+      <div class="dev-info" aria-label="開発情報">
+        <span id="fpsDisplay">-- FPS</span>
+        <span id="versionDisplay">v0.0.1</span>
+      </div>
+    </header>
+
+    <main id="sceneRoot" class="scene-root" aria-live="polite">
+      <section id="loadingScene" class="scene is-active">
+        <div class="loading-card">
+          <div class="loading-symbol" aria-hidden="true">◆</div>
+          <p>深淵を構築中...</p>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-navigation" aria-label="メインメニュー">
+      <button type="button" data-nav="home" class="nav-button is-active">
+        <span class="nav-icon" aria-hidden="true">🏠</span>
+        <span>ホーム</span>
+      </button>
+
+      <button type="button" data-nav="monsters" class="nav-button">
+        <span class="nav-icon" aria-hidden="true">🐲</span>
+        <span>モンスター</span>
+      </button>
+
+      <button type="button" data-nav="equipment" class="nav-button">
+        <span class="nav-icon" aria-hidden="true">⚔️</span>
+        <span>装備</span>
+      </button>
+
+      <button type="button" data-nav="shop" class="nav-button">
+        <span class="nav-icon" aria-hidden="true">🏪</span>
+        <span>ショップ</span>
+      </button>
+
+      <button type="button" data-nav="settings" class="nav-button">
+        <span class="nav-icon" aria-hidden="true">⚙️</span>
+        <span>設定</span>
+      </button>
+    </nav>
+
+    <div id="modalRoot" class="modal-root" aria-live="assertive"></div>
+    <div id="toastRoot" class="toast-root" aria-live="polite"></div>
+  </div>
+
+  <noscript>
+    このゲームを遊ぶにはJavaScriptを有効にしてください。
+  </noscript>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
