@@ -1,4 +1,4 @@
-const VERSION="0.1.0",KEY="abyss-dominion-v006",TILE=48,COLS=31,ROWS=31;
+const VERSION="0.1.1",KEY="abyss-dominion-v006",TILE=48,COLS=31,ROWS=31;
 const SPECIES={
 slime:{name:"スライム",color:"#67d273",hp:46,atk:6,def:1,spd:10,skill:"ぷるぷる体当たり"},
 goblin:{name:"ゴブリン",color:"#a18c58",hp:52,atk:9,def:2,spd:15,skill:"二段斬り"},
@@ -211,10 +211,167 @@ function startExplore(options={}){
   last=performance.now();
   requestAnimationFrame(loop);
 }
-function stopExplore(){run=false;unbindInput($("canvas"))}
+function stopExplore(){
+  run=false;
+  unbindInput($("canvas"));
+  resetInputState();
+}
 function spawn(){const cells=world.cells().filter(c=>c.x+c.y>8&&!enemies.some(e=>e.x===c.x&&e.y===c.y));const p=cells[Math.floor(Math.random()*cells.length)],types=Object.keys(SPECIES),sp=types[Math.floor(Math.random()*types.length)];const e=new E(p.x,p.y);e.species=sp;e.level=Math.max(1,state.floor+Math.floor(Math.random()*5)-1);e.patrol=1;e.repath=0;enemies.push(e)}
-function bindInput(c){c.onpointerdown=e=>{c.setPointerCapture?.(e.pointerId);input.pts.set(e.pointerId,{x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY});input.last={x:e.clientX,y:e.clientY};input.drag=false};c.onpointermove=e=>{const p=input.pts.get(e.pointerId);if(!p)return;p.x=e.clientX;p.y=e.clientY;const pts=[...input.pts.values()];if(pts.length===1){const dx=e.clientX-input.last.x,dy=e.clientY-input.last.y;if(Math.hypot(e.clientX-p.sx,e.clientY-p.sy)>7)input.drag=true;if(input.drag){camera.pan(dx*(c.width/c.clientWidth),dy*(c.height/c.clientHeight));camera.clamp(world)}input.last={x:e.clientX,y:e.clientY}}else if(pts.length===2){input.drag=true;const dis=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);if(input.pinch)camera.z=Math.max(.45,Math.min(1.55,camera.z*dis/input.pinch));input.pinch=dis;camera.clamp(world)}};c.onpointerup=e=>{const p=input.pts.get(e.pointerId);if(!p)return;input.pts.delete(e.pointerId);if(input.pts.size<2)input.pinch=null;if(!input.drag){const now=performance.now();if(now-input.tap<280){camera.reset(player.rx*TILE,player.ry*TILE);camera.clamp(world);input.tap=0}else{tapMove(e);input.tap=now}}}}
-function unbindInput(c){c.onpointerdown=c.onpointermove=c.onpointerup=null}
+function resetInputState(){
+  input.pts.clear();
+  input.last=null;
+  input.pinch=null;
+  input.drag=false;
+  input.tap=0;
+}
+
+function bindInput(c){
+  resetInputState();
+
+  const finishPointer=e=>{
+    input.pts.delete(e.pointerId);
+
+    if(input.pts.size===0){
+      input.last=null;
+      input.pinch=null;
+      input.drag=false;
+      return;
+    }
+
+    if(input.pts.size===1){
+      const remaining=[...input.pts.values()][0];
+      input.last={x:remaining.x,y:remaining.y};
+      input.pinch=null;
+      input.drag=true;
+    }
+  };
+
+  c.onpointerdown=e=>{
+    if(explorationPaused)return;
+
+    c.setPointerCapture?.(e.pointerId);
+    input.pts.set(e.pointerId,{
+      x:e.clientX,
+      y:e.clientY,
+      sx:e.clientX,
+      sy:e.clientY
+    });
+
+    const points=[...input.pts.values()];
+
+    if(points.length===1){
+      input.last={x:e.clientX,y:e.clientY};
+      input.pinch=null;
+      input.drag=false;
+    }
+
+    if(points.length===2){
+      input.drag=true;
+      input.last=null;
+      input.pinch=Math.hypot(
+        points[0].x-points[1].x,
+        points[0].y-points[1].y
+      );
+    }
+  };
+
+  c.onpointermove=e=>{
+    if(explorationPaused)return;
+
+    const p=input.pts.get(e.pointerId);
+    if(!p)return;
+
+    p.x=e.clientX;
+    p.y=e.clientY;
+
+    const points=[...input.pts.values()];
+
+    if(points.length===1){
+      const only=points[0];
+
+      if(!input.last){
+        input.last={x:only.x,y:only.y};
+        return;
+      }
+
+      const dx=only.x-input.last.x;
+      const dy=only.y-input.last.y;
+      const moved=Math.hypot(only.x-only.sx,only.y-only.sy);
+
+      if(moved>7)input.drag=true;
+
+      if(input.drag){
+        camera.pan(
+          dx*(c.width/c.clientWidth),
+          dy*(c.height/c.clientHeight)
+        );
+        camera.clamp(world);
+      }
+
+      input.last={x:only.x,y:only.y};
+      input.pinch=null;
+      return;
+    }
+
+    if(points.length===2){
+      input.drag=true;
+      input.last=null;
+
+      const distance=Math.hypot(
+        points[0].x-points[1].x,
+        points[0].y-points[1].y
+      );
+
+      if(input.pinch&&Number.isFinite(distance)&&distance>0){
+        const scale=Math.max(.92,Math.min(1.08,distance/input.pinch));
+        camera.z=Math.max(.45,Math.min(1.55,camera.z*scale));
+        camera.clamp(world);
+      }
+
+      input.pinch=distance;
+      return;
+    }
+
+    // 3本以上では誤操作防止のため、カメラ変更を行わない。
+    input.last=null;
+    input.pinch=null;
+    input.drag=true;
+  };
+
+  c.onpointerup=e=>{
+    const p=input.pts.get(e.pointerId);
+    if(!p)return;
+
+    const wasSingle=input.pts.size===1;
+    const wasDragged=input.drag;
+    finishPointer(e);
+
+    if(!wasSingle||wasDragged||explorationPaused)return;
+
+    const now=performance.now();
+
+    if(now-input.tap<280){
+      camera.reset(player.rx*TILE,player.ry*TILE);
+      camera.clamp(world);
+      input.tap=0;
+    }else{
+      tapMove(e);
+      input.tap=now;
+    }
+  };
+
+  c.onpointercancel=finishPointer;
+  c.onlostpointercapture=finishPointer;
+}
+
+function unbindInput(c){
+  c.onpointerdown=null;
+  c.onpointermove=null;
+  c.onpointerup=null;
+  c.onpointercancel=null;
+  c.onlostpointercapture=null;
+  resetInputState();
+}
 function tapMove(e){if(explorationPaused)return;const c=$("canvas"),r=c.getBoundingClientRect(),sx=(e.clientX-r.left)*(c.width/r.width),sy=(e.clientY-r.top)*(c.height/r.height),w=camera.screen(sx,sy),g={x:Math.floor(w.x/TILE),y:Math.floor(w.y/TILE)};if(!world.walk(g.x,g.y))return;player.setPath(path(world,player,g))}
 function loop(now){if(!run)return;const dt=Math.min(.05,(now-last)/1000||0);last=now;update(dt);draw();requestAnimationFrame(loop)}
 function update(dt){if(explorationPaused)return;if(player.move(dt,5)){for(const c of world.chests)if(!c.open&&c.x===player.x&&c.y===player.y){c.open=true;randomChest()}if(world.shop&&player.x===world.shop.x&&player.y===world.shop.y){stopExplore();state.nextShopFloor=state.floor+3+Math.floor(Math.random()*5);save();show("shop");return}if(player.x===world.exit.x&&player.y===world.exit.y){exploreSnapshot=null;activeEncounterEnemy=null;state.floor++;state.maxFloor=Math.max(state.maxFloor,state.floor);if(state.floor%10===0)state.checkpoint=state.floor;save();startExplore();return}}
