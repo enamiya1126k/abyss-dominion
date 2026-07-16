@@ -1,0 +1,197 @@
+/* ABYSS DOMINION
+   v0.0.1 Foundation
+   Main application layout
+*/
+
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background:
+    radial-gradient(circle at top, rgba(80, 44, 109, 0.28), transparent 38%),
+    var(--bg);
+  color: var(--text);
+}
+
+button {
+  color: inherit;
+}
+
+.app-shell {
+  width: 100%;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.02),
+      rgba(255, 255, 255, 0)
+    );
+}
+
+.app-header {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding:
+    max(12px, env(safe-area-inset-top))
+    16px
+    12px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(15, 10, 23, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.app-header > div {
+  min-width: 0;
+}
+
+.app-eyebrow {
+  color: var(--gold);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.app-title {
+  margin-top: 3px;
+  overflow: hidden;
+  font-size: clamp(1.05rem, 4vw, 1.45rem);
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dev-info {
+  flex: 0 0 auto;
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  color: var(--sub);
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.scene-root {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+  display: none;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: none;
+}
+
+.scene.is-active {
+  display: block;
+}
+
+.loading-card {
+  width: min(86%, 360px);
+  min-height: 180px;
+  margin: 22vh auto 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  padding: 28px;
+  text-align: center;
+  background: linear-gradient(180deg, var(--panel2), var(--panel));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.38);
+}
+
+.loading-symbol {
+  color: var(--gold);
+  font-size: 2.2rem;
+  animation: abyss-spin 1.5s linear infinite;
+}
+
+@keyframes abyss-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.bottom-navigation {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  padding:
+    8px
+    8px
+    max(8px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  background: rgba(15, 10, 23, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.nav-button {
+  min-width: 0;
+  min-height: 56px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  padding: 6px 2px;
+  color: var(--sub);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  font-size: 0.65rem;
+}
+
+.nav-button.is-active {
+  color: var(--text);
+  background: var(--panel2);
+  border-color: var(--border);
+}
+
+.nav-icon {
+  font-size: 1.22rem;
+  line-height: 1;
+}
+
+.modal-root,
+.toast-root {
+  position: fixed;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.modal-root {
+  inset: 0;
+}
+
+.toast-root {
+  left: 50%;
+  bottom: calc(82px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+}
+
+@media (min-width: 760px) {
+  .app-shell {
+    width: min(100%, 760px);
+    margin: 0 auto;
+    border-inline: 1px solid var(--border);
+  }
+}
