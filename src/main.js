@@ -2,37 +2,26 @@ import { GAME_VERSION } from "./game/config.js";
 import { SceneManager } from "./game/sceneManager.js";
 import { SaveManager } from "./game/saveManager.js";
 import { InputManager } from "./game/inputManager.js";
-import { Camera } from "./game/camera.js";
+import { ExploreScene } from "./game/exploreScene.js";
 
-const root = document.querySelector("#sceneRoot");
+const sceneRoot = document.querySelector("#sceneRoot");
 const nav = document.querySelector(".bottom-navigation");
 const fps = document.querySelector("#fpsDisplay");
 document.querySelector("#versionDisplay").textContent = `v${GAME_VERSION}`;
 
 const save = new SaveManager();
 const input = new InputManager();
-const camera = new Camera();
-const scenes = new SceneManager(root);
+const scenes = new SceneManager(sceneRoot);
+let exploreScene = null;
 
-const page = (title, text) => `
-<section class="scene is-active foundation-scene">
-  <div class="foundation-content">
-    <div class="panel">
-      <p class="app-eyebrow">FOUNDATION BUILD</p>
-      <h2>${title}</h2>
-      <p class="sub">${text}</p>
-    </div>
-  </div>
-</section>`;
-
-scenes.register("home", () => `
+const homeTemplate = () => `
 <section class="scene is-active foundation-scene">
   <div class="foundation-content">
     <div class="panel foundation-hero">
-      <p class="app-eyebrow">v${GAME_VERSION}</p>
-      <h2>基盤システム起動</h2>
-      <p class="sub">シーン・入力・カメラ・セーブ・FPS計測が接続済み。</p>
-      <button id="exploreTestBtn" class="bigButton">探索入力テスト</button>
+      <p class="app-eyebrow">EXPLORE BUILD</p>
+      <h2>地下探索</h2>
+      <p class="sub">迷路を自由に探索し、宝箱と階段を探す。</p>
+      <button id="startExploreBtn" class="bigButton">探索開始</button>
     </div>
     <div class="foundation-grid">
       <article class="card"><span class="sub">現在階層</span><strong>${save.data.floor}</strong></article>
@@ -41,53 +30,72 @@ scenes.register("home", () => `
       <article class="card"><span class="sub">魔晶石</span><strong>${save.data.magicCrystals}</strong></article>
     </div>
   </div>
-</section>`);
+</section>`;
 
-scenes.register("monsters", () => page("モンスター", "検索・編成・育成をここへ追加する。"));
-scenes.register("equipment", () => page("装備", "武器・防具・アクセサリーをここへ追加する。"));
-scenes.register("shop", () => page("ショップ", "購入・売却・安全部屋をここへ追加する。"));
-scenes.register("settings", () => page("設定", "演出・速度・セーブ設定をここへ追加する。"));
-scenes.register("explore", () => `
+const placeholder = (title) => `
 <section class="scene is-active foundation-scene">
   <div class="foundation-content">
     <div class="panel">
-      <p class="app-eyebrow">INPUT TEST</p>
-      <h2>探索入力テスト</h2>
-      <div class="camera-readout">
-        <span>X <b id="camX">0</b></span>
-        <span>Y <b id="camY">0</b></span>
-        <span>ZOOM <b id="camZ">1.00</b></span>
-      </div>
-      <div id="inputArea" class="input-test-area">1本指ドラッグ<br>2本指ピンチ<br>ダブルタップで復帰</div>
-      <button id="homeBtn" class="bigButton">ホームへ</button>
+      <p class="app-eyebrow">COMING NEXT</p>
+      <h2>${title}</h2>
+      <p class="sub">次のアップデートで実装する。</p>
     </div>
   </div>
+</section>`;
+
+scenes.register("home", homeTemplate);
+scenes.register("monsters", () => placeholder("モンスター"));
+scenes.register("equipment", () => placeholder("装備"));
+scenes.register("shop", () => placeholder("ショップ"));
+scenes.register("settings", () => placeholder("設定"));
+scenes.register("explore", () => `
+<section class="scene is-active explore-scene">
+  <div class="explore-hud">
+    <span>FLOOR <b id="exploreFloor">${save.data.floor}</b></span>
+    <span>タップ移動 / ドラッグ / ピンチ</span>
+  </div>
+  <canvas id="dungeonCanvas" class="dungeon-canvas"></canvas>
+  <canvas id="minimapCanvas" class="minimap-canvas"></canvas>
+  <button id="leaveExploreBtn" class="leave-explore">帰還</button>
 </section>`);
 
-function updateCamera() {
-  document.querySelector("#camX")?.replaceChildren(document.createTextNode(camera.x.toFixed(0)));
-  document.querySelector("#camY")?.replaceChildren(document.createTextNode(camera.y.toFixed(0)));
-  document.querySelector("#camZ")?.replaceChildren(document.createTextNode(camera.zoom.toFixed(2)));
-}
-
 scenes.onChange((name) => {
-  document.querySelectorAll(".nav-button").forEach((b) => {
-    b.classList.toggle("is-active", b.dataset.nav === name || (name === "explore" && b.dataset.nav === "home"));
+  exploreScene?.stop();
+  exploreScene = null;
+
+  document.querySelectorAll(".nav-button").forEach((button) => {
+    button.classList.toggle(
+      "is-active",
+      button.dataset.nav === name || (name === "explore" && button.dataset.nav === "home")
+    );
   });
 
   if (name === "home") {
-    document.querySelector("#exploreTestBtn")?.addEventListener("click", () => scenes.show("explore"));
+    document.querySelector("#startExploreBtn")?.addEventListener("click", () => scenes.show("explore"));
   }
 
   if (name === "explore") {
-    document.querySelector("#homeBtn")?.addEventListener("click", () => scenes.show("home"));
-    const area = document.querySelector("#inputArea");
-    input.attach(area, {
-      onPan: ({ deltaX, deltaY }) => { camera.panBy(-deltaX, -deltaY); updateCamera(); },
-      onPinch: ({ scale }) => { camera.zoomBy(scale); updateCamera(); },
-      onDoubleTap: () => { camera.reset(); updateCamera(); }
+    document.querySelector("#leaveExploreBtn")?.addEventListener("click", () => scenes.show("home"));
+    exploreScene = new ExploreScene({
+      canvas: document.querySelector("#dungeonCanvas"),
+      minimapCanvas: document.querySelector("#minimapCanvas"),
+      inputManager: input,
+      onFloorClear: () => {
+        save.update({
+          floor: save.data.floor + 1,
+          maxFloor: Math.max(save.data.maxFloor, save.data.floor + 1),
+        });
+        exploreScene?.stop();
+        exploreScene = new ExploreScene({
+          canvas: document.querySelector("#dungeonCanvas"),
+          minimapCanvas: document.querySelector("#minimapCanvas"),
+          inputManager: input,
+          onFloorClear: () => scenes.show("explore"),
+        });
+        scenes.show("explore");
+      },
     });
-    updateCamera();
+    exploreScene.start();
   }
 });
 
@@ -96,22 +104,27 @@ nav.addEventListener("click", (event) => {
   if (button) scenes.show(button.dataset.nav);
 });
 
+window.addEventListener("abyss:toast", (event) => {
+  const root = document.querySelector("#toastRoot");
+  root.textContent = event.detail;
+  root.classList.add("toast-visible");
+  clearTimeout(window.__abyssToastTimer);
+  window.__abyssToastTimer = setTimeout(() => {
+    root.classList.remove("toast-visible");
+  }, 1200);
+});
+
 let frames = 0;
 let started = performance.now();
-function loop(now) {
+function fpsLoop(now) {
   frames++;
   if (now - started >= 500) {
     fps.textContent = `${Math.round(frames * 1000 / (now - started))} FPS`;
     frames = 0;
     started = now;
   }
-  requestAnimationFrame(loop);
+  requestAnimationFrame(fpsLoop);
 }
 
-window.addEventListener("beforeunload", () => {
-  save.flush();
-  input.detach();
-});
-
 scenes.show("home");
-requestAnimationFrame(loop);
+requestAnimationFrame(fpsLoop);
