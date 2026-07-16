@@ -15,3 +15,69 @@ button{background:#342342;border:1px solid #654d78;border-radius:13px;padding:10
 .battle-party{display:grid;grid-template-columns:1fr 1fr;gap:7px}.battle-unit{padding:9px;background:#1a1121;border:1px solid #493557;border-radius:14px}.battle-unit.active{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}.battle-unit.dead{opacity:.45}.unit-bar{margin-top:5px}.command-panel{background:#17101f;border:1px solid var(--line);border-radius:18px;padding:12px}.commands{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}.commands button{font-size:.68rem;padding:10px 2px}
 .loot{position:fixed;z-index:50;inset:0;background:#050308dc;display:grid;place-items:center;padding:14px}.loot-card{width:min(92%,430px);background:#17101f;border:1px solid #7c5b92;border-radius:22px;padding:20px;text-align:center}.loot-icon{font-size:4.5rem}.loot-title{font-size:1.5rem;font-weight:950;color:var(--gold);margin:8px}.level-up{color:#ffe377;font-weight:950}.search{width:100%;padding:10px;border-radius:12px;border:1px solid var(--line);background:#0e0913;color:var(--text);margin:8px 0}
 @media(max-width:430px){.monster-grid,.gear-grid{grid-template-columns:1fr}.commands{grid-template-columns:repeat(3,1fr)}.battle{grid-template-rows:auto minmax(270px,1fr) auto auto}.enemy-card{min-height:270px}}
+/* v0.0.8 Explore UX Fix */
+.canvas-wrap{
+  background:#120c18;
+}
+#canvas{
+  background:#120c18;
+}
+#minimap{
+  transition:opacity .18s,transform .18s;
+  opacity:1;
+}
+#minimap.minimap-off{
+  opacity:0;
+  transform:scale(.92);
+  pointer-events:none;
+}
+.minimap-toggle{
+  position:absolute;
+  z-index:6;
+  right:10px;
+  top:148px;
+  min-width:70px;
+  padding:7px 9px;
+  border-radius:999px;
+  font-size:.62rem;
+  background:#21162aee;
+  border:1px solid #6e5080;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+.loot{
+  backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:blur(3px);
+}
+.loot::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:rgba(5,3,8,.72);
+  pointer-events:none;
+}
+.loot-card{
+  position:relative;
+  z-index:2;
+}
+.map-paused::after{
+  content:"PAUSED";
+  position:absolute;
+  left:50%;
+  bottom:18px;
+  transform:translateX(-50%);
+  z-index:7;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#130c19dd;
+  border:1px solid #6c4c80;
+  color:#d9c7e6;
+  font-size:.65rem;
+  letter-spacing:.14em;
+}
+@media(max-width:430px){
+  .minimap-toggle{
+    top:140px;
+    right:9px;
+  }
+}
