@@ -158,3 +158,14 @@ button{background:#342342;border:1px solid #654d78;border-radius:13px;padding:10
 .minimap-toggle:focus-visible{
   opacity:1;
 }
+
+/* v0.1.1 Input Hotfix */
+#canvas{
+  touch-action:none!important;
+  overscroll-behavior:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
+.canvas-wrap{
+  overscroll-behavior:none;
+}
