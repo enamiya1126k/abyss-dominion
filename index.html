@@ -1,152 +1,150 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-  <meta name="theme-color" content="#09060d">
-  <meta name="description" content="ABYSS DOMINION - 地下1000階の魔王">
-  <title>ABYSS DOMINION</title>
-  <link rel="stylesheet" href="./src/styles/reset.css">
-  <link rel="stylesheet" href="./src/styles/theme.css">
-  <link rel="stylesheet" href="./src/styles/app.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#09060d">
+<title>ABYSS DOMINION</title>
+<link rel="stylesheet" href="./src/styles/reset.css">
+<link rel="stylesheet" href="./src/styles/app.css">
 </head>
 <body>
-  <div id="app" class="app-shell">
-    <section id="homeScreen" class="screen active">
-      <div class="page">
-        <div class="brand">
-          <div class="eyebrow">ABYSS DOMINION</div>
-          <h1>地下1000階の魔王</h1>
-          <p>探索・宝箱・敵回避・セレクトショップを1本につないだ探索完成版。</p>
+<div id="app">
+  <section id="home" class="screen active">
+    <div class="page">
+      <div class="eyebrow">ABYSS DOMINION</div>
+      <h1>地下1000階の魔王</h1>
+      <p class="muted">探索・戦闘・捕獲・育成・装備がつながった育成開始版。</p>
+
+      <div class="panel hero">
+        <div>
+          <div id="homeArea" class="gold"></div>
+          <div id="homeFloor" class="headline"></div>
+          <div id="homeMoney" class="muted"></div>
         </div>
-
-        <div class="panel hero-panel">
-          <div>
-            <div id="homeArea" class="area-name">地下洞窟</div>
-            <div id="homeFloor" class="hero-floor">最高到達 1階</div>
-            <div id="homeStats" class="muted"></div>
-          </div>
-          <button id="startButton" class="primary big">探索へ</button>
-        </div>
-
-        <div class="panel">
-          <div class="spread">
-            <h2>チェックポイント</h2>
-            <span class="small">10階ごとに保存</span>
-          </div>
-          <div id="checkpointList" class="checkpoint-list"></div>
-        </div>
-
-        <div class="panel">
-          <h2>v0.0.5 Explore Update</h2>
-          <ul class="feature-list">
-            <li>タップ移動</li>
-            <li>1本指ドラッグ</li>
-            <li>2本指ピンチズーム</li>
-            <li>ダブルタップで主人公へ復帰</li>
-            <li>敵の巡回・通路追跡・見失い</li>
-            <li>宝箱・ショップ・階段・次階層</li>
-            <li>マップ外タップ無効</li>
-          </ul>
-        </div>
-
-        <button id="resetButton" class="danger">セーブ初期化</button>
-      </div>
-    </section>
-
-    <section id="exploreScreen" class="screen">
-      <div class="game-shell">
-        <header class="hud">
-          <div><span>階</span><b id="floorHud">1</b></div>
-          <div><span>G</span><b id="goldHud">0</b></div>
-          <div><span>魔晶石</span><b id="crystalHud">0</b></div>
-          <div class="hp-wide">
-            <span>魔王軍HP</span>
-            <div class="bar"><i id="hpFill"></i></div>
-            <b id="hpText">160/160</b>
-          </div>
-          <div class="dev-chip"><span id="fpsText">-- FPS</span><span>v0.0.5</span></div>
-        </header>
-
-        <div class="canvas-wrap">
-          <canvas id="gameCanvas"></canvas>
-          <canvas id="miniMap"></canvas>
-
-          <div id="toast" class="toast hidden"></div>
-
-          <div id="areaBanner" class="area-banner hidden">
-            <div>
-              <span id="bannerFloor" class="eyebrow"></span>
-              <strong id="bannerArea"></strong>
-            </div>
-          </div>
-
-          <div id="lootModal" class="loot-modal hidden">
-            <div id="lootIcon" class="loot-icon">🎁</div>
-            <div id="lootRarity" class="loot-rarity">N</div>
-            <div id="lootName" class="loot-name">アイテム</div>
-            <div id="lootDetail" class="muted"></div>
-            <button id="lootClose" class="primary">受け取る</button>
-          </div>
-        </div>
-
-        <nav class="bottom-nav">
-          <button data-menu="status">ステータス</button>
-          <button data-menu="inventory">持ち物</button>
-          <button data-menu="map">マップ</button>
-          <button data-menu="help">操作</button>
-          <button id="returnButton" class="danger">帰還</button>
-        </nav>
+        <button id="startBtn" class="primary">探索へ</button>
       </div>
 
-      <div id="sheet" class="sheet hidden">
-        <button id="sheetClose" class="sheet-close">×</button>
-        <div id="sheetBody"></div>
+      <div class="panel">
+        <div class="spread"><h2>パーティー</h2><button data-open="party">編成</button></div>
+        <div id="homeParty" class="compact-list"></div>
       </div>
-    </section>
 
-    <section id="shopScreen" class="screen">
-      <div class="room-page">
-        <header class="room-header">
-          <div>
-            <div class="eyebrow">SAFE ROOM</div>
-            <h1>深淵のセレクトショップ</h1>
-          </div>
-          <button id="leaveShopButton">戻る</button>
-        </header>
+      <div class="home-grid">
+        <button data-open="monsters">モンスター</button>
+        <button data-open="equipment">装備</button>
+        <button data-open="inventory">持ち物</button>
+        <button data-open="souls">魔魂</button>
+      </div>
 
-        <div class="room-grid">
-          <button class="room-card" data-room="bed">
-            <span>🛏️</span><b>ベッド</b><small>100Gで全回復</small>
-          </button>
-          <button class="room-card" data-room="merchant">
-            <span>🧙‍♂️</span><b>商人</b><small>購入・売却</small>
-          </button>
-          <button class="room-card" data-room="storage">
-            <span>🧰</span><b>倉庫</b><small>所持品確認</small>
-          </button>
-          <button class="room-card" data-room="rumor">
-            <span>🔮</span><b>深淵の噂</b><small>次階層情報</small>
-          </button>
+      <div class="panel">
+        <h2>v0.0.6 Growth Update</h2>
+        <ul class="features">
+          <li>敵接触でターン制戦闘</li>
+          <li>撃破で経験値・魔魂・装備ドロップ</li>
+          <li>捕獲結晶で敵を仲間にできる</li>
+          <li>手持ち・パーティー編成</li>
+          <li>武器・防具・アクセサリー装着</li>
+          <li>★覚醒と同種合成＋値</li>
+          <li>自由パン＋デッドゾーン追尾カメラ</li>
+        </ul>
+      </div>
+
+      <button id="resetBtn" class="danger full">セーブ初期化</button>
+    </div>
+  </section>
+
+  <section id="explore" class="screen">
+    <div class="game-shell">
+      <header class="hud">
+        <div><small>階</small><b id="floorHud"></b></div>
+        <div><small>G</small><b id="goldHud"></b></div>
+        <div><small>魔晶石</small><b id="crystalHud"></b></div>
+        <div class="party-hp">
+          <small>パーティーHP</small>
+          <div class="bar"><i id="partyHpFill"></i></div>
+          <b id="partyHpText"></b>
         </div>
+        <div class="version">v0.0.6<br><span id="fps">-- FPS</span></div>
+      </header>
 
-        <div id="roomPanel" class="panel">
-          <h2>敵の来ない安全地帯</h2>
-          <p class="muted">休憩と買い物を済ませてから探索へ戻れる。</p>
-        </div>
+      <div class="canvas-wrap">
+        <canvas id="canvas"></canvas>
+        <canvas id="minimap"></canvas>
+        <div id="toast" class="toast hidden"></div>
       </div>
-    </section>
 
-    <section id="resultScreen" class="screen">
-      <div class="page">
-        <div id="resultEye" class="eyebrow"></div>
-        <h1 id="resultTitle"></h1>
-        <div id="resultBody"></div>
-        <button id="homeButton" class="primary big">魔王城へ</button>
+      <nav class="bottom-nav">
+        <button data-open="party">編成</button>
+        <button data-open="monsters">手持ち</button>
+        <button data-open="equipment">装備</button>
+        <button data-open="inventory">持ち物</button>
+        <button id="returnBtn" class="danger">帰還</button>
+      </nav>
+    </div>
+  </section>
+
+  <section id="shop" class="screen">
+    <div class="page">
+      <div class="spread">
+        <div><div class="eyebrow">SAFE ROOM</div><h1>セレクトショップ</h1></div>
+        <button id="leaveShop">探索へ</button>
       </div>
-    </section>
+      <div class="shop-grid">
+        <button data-shop="bed"><span>🛏️</span><b>ベッド</b><small>100Gで全回復</small></button>
+        <button data-shop="potion"><span>🧪</span><b>回復薬</b><small>50G</small></button>
+        <button data-shop="capture"><span>💎</span><b>捕獲結晶</b><small>80G</small></button>
+        <button data-shop="gear"><span>⚔️</span><b>ランダム装備</b><small>180G</small></button>
+      </div>
+      <div id="shopMessage" class="panel">安全地帯。ここでは敵は出現しない。</div>
+    </div>
+  </section>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head"><h2 id="modalTitle"></h2><button id="modalClose">×</button></div>
+      <div id="modalBody"></div>
+    </div>
   </div>
 
-  <script type="module" src="./src/main.js"></script>
+  <div id="battle" class="battle hidden">
+    <div class="battle-top">
+      <div>TURN <b id="turnNo">1</b></div>
+      <button id="autoBtn">AUTO OFF</button>
+      <button id="speedBtn">×1.0</button>
+      <button id="escapeBtn">逃げる</button>
+    </div>
+
+    <div class="enemy-card">
+      <div class="spread"><div><div id="enemyName" class="enemy-name"></div><small id="enemyStatus">正常</small></div><div id="enemyIcon" class="enemy-icon"></div></div>
+      <div class="bar enemy-bar"><i id="enemyHpFill"></i></div>
+      <div id="enemyHpText" class="hp-number"></div>
+      <div id="battleEffect" class="battle-effect"></div>
+    </div>
+
+    <div id="battleParty" class="battle-party"></div>
+
+    <div class="command-panel">
+      <div class="spread"><h2 id="actorName"></h2><span id="battleHint" class="muted"></span></div>
+      <div class="commands">
+        <button data-command="attack">たたかう</button>
+        <button data-command="guard">ガード</button>
+        <button data-command="skill">スキル</button>
+        <button data-command="item">アイテム</button>
+        <button data-command="capture">捕獲</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loot" class="loot hidden">
+    <div class="loot-card">
+      <div id="lootIcon" class="loot-icon"></div>
+      <div id="lootTitle" class="loot-title"></div>
+      <div id="lootBody"></div>
+      <button id="lootClose" class="primary full">続ける</button>
+    </div>
+  </div>
+</div>
+<script type="module" src="./src/main.js"></script>
 </body>
 </html>
